@@ -243,101 +243,161 @@ docker-compose exec app cat pop_solver/app.py  # Check actual file content
 - **Plan Modifications**: _None - implementation completed as designed_
 
 
-## Phase 3 Implementation Notes (CRITICAL for Next Claude)
+## Phase 3 COMPLETED - Natural Language Interface ✅
 
-### Agent Implementation Goal
-Implement intelligent agent in `/solve` endpoint to handle natural language queries and connect them to planning functions via MCP server.
+### What Was Built
+- **MCP Client** (`pop_solver/mcp_client.py`) - STDIO-based communication with MCP server
+- **Planning Agent** (`pop_solver/agent.py`) - Claude Sonnet 4 integration for NLP
+- **API Endpoint** (`/solve`) - POST endpoint accepting natural language queries
+- **Comprehensive Tests** - 47 total tests passing (22 planning + 15 MCP + 10 Phase 3)
 
-### MCP Server Integration (Ready to Use)
-**MCP Server**: `pop_solver/mcp_server.py` - STDIO server with planning tools exposed
-**Available MCP Tools:**
-- `apply_operator_tool`: Apply operators to states
-- `create_plan_tool`: Generate plans from start to goal conditions
+### Critical Working Details
+- **Model**: Using `claude-sonnet-4-20250514` (NOT claude-3-5-sonnet variants)
+- **Environment**: API key loaded from `.env` file via `python-dotenv`
+- **Docker**: Fully working with `env_file: - .env` in docker-compose.yaml
+- **Testing**: Mocked tests work without API key, real tests require `ANTHROPIC_API_KEY`
 
-**Usage Pattern:**
-```python
-# Start MCP server as subprocess
-# Connect MCP client via STDIO transport
-# Call tools: client.call_tool("apply_operator_tool", {...})
+## Phase 4: Blocks World Implementation (NEXT TASK)
+
+### Goal
+Implement the classic blocks world planning domain as a second domain alongside the robot painting problem.
+
+### What is Blocks World?
+A classic AI planning domain consisting of wooden blocks on a table. The goal is to rearrange blocks into specific configurations through a series of moves. Only one block can be moved at a time, and blocks underneath others cannot be moved.
+
+### Current Blockworld Status
+- **Classes exist but not implemented**:
+  - `pop_solver/planning/planner/instances/blockworld_planner.py` (empty stub)
+  - `pop_solver/planning/state/instances/blockworld_state.py` (likely needs creation)
+- **Error handling in place**: Returns "Blockworld planner not implemented" gracefully
+- **Tests ready**: Blockworld tests exist but are skipped/mocked
+
+### Implementation Requirements
+
+#### 1. Blocks World Domain Definition
+**Classic blocks world problem:**
+- **Objects**: Blocks (A, B, C, etc.) and a table
+- **States**:
+  - `On(A, B)` - Block A is on block B
+  - `On(A, Table)` - Block A is on the table
+  - `Clear(A)` - Nothing is on top of block A (can be moved)
+  - `Clear(Table)` - Table always has space (always true)
+
+#### 2. Blocks World Operators
+**Operators using precondition/postcondition format:**
+```json
+{
+  "name": "pickup",
+  "preconditions": ["Clear(block)", "On(block, Table)"],
+  "postconditions": ["Holding(block)", "¬On(block, Table)", "¬Clear(block)"]
+}
+
+{
+  "name": "putdown",
+  "preconditions": ["Holding(block)"],
+  "postconditions": ["On(block, Table)", "Clear(block)", "¬Holding(block)"]
+}
+
+{
+  "name": "stack",
+  "preconditions": ["Holding(block1)", "Clear(block2)"],
+  "postconditions": ["On(block1, block2)", "Clear(block1)", "¬Holding(block1)", "¬Clear(block2)"]
+}
+
+{
+  "name": "unstack",
+  "preconditions": ["On(block1, block2)", "Clear(block1)"],
+  "postconditions": ["Holding(block1)", "Clear(block2)", "¬On(block1, block2)", "¬Clear(block1)"]
+}
+```
+**Note**: Postconditions include BOTH positive effects (what becomes true) and negative effects (what becomes false, marked with ¬)
+
+#### 3. Files to Modify/Create
+
+**Create/Implement:**
+1. `pop_solver/planning/planner/instances/blockworld_planner.py`
+2. `pop_solver/planning/state/instances/blockworld_state.py`
+3. `pop_solver/planning/operator/instances/blockworld_operators.json`
+
+**Update:**
+1. `planning_solving_functions.py` - Remove the ValueError for blockworld
+2. `pop_solver/agent.py` - Add blockworld examples to prompts
+3. Tests - Enable blockworld tests
+
+#### 4. Natural Language Examples for Blocks World
+```
+"Stack block A on block B"
+"Move all blocks to the table"
+"Build a tower with A on B on C"
+"Clear block C so it can be moved"
+"Rearrange blocks from [A on B, C on table] to [B on C, A on table]"
 ```
 
-### Phase 3 Implementation Requirements
+### Critical Implementation Notes
 
-**1. Add LLM Client Dependency**
-- Add OpenAI or Anthropic client to `pyproject.toml`
-- Add API key environment variables to `.env.example`
+**1. Planning Algorithm**: This system uses **Partial Order Planning (POP)**
+   - Builds separate partial plans for each goal condition
+   - Reorders plans to avoid conflicts
+   - Connects partial plans together
+   - Uses backward chaining from goals to start state
 
-**2. Create Agent in `/solve` Endpoint**
-**File**: `pop_solver/app.py` (extend existing FastAPI app)
-**Functionality**:
-- **Natural Language Processing**: Parse user queries like "I need the robot to paint the ceiling"
-- **Problem Classification**: Determine if query is robot or blockworld problem (only robot works currently)
-- **State/Goal Extraction**: Extract start conditions and goal conditions from natural language
-- **MCP Client Integration**: Connect to local MCP server via subprocess + STDIO
-- **Planning Execution**: Call appropriate MCP tools based on query type
-- **Response Formatting**: Return human-readable results
+**2. Operator Format**: Uses **precondition/postcondition** format (NOT STRIPS add/delete effects)
+   - **Preconditions**: List of conditions that must be true before operator applies
+   - **Postconditions**: ALL state changes including:
+     - Positive effects: what becomes true (e.g., `"Painted(Ceiling)"`)
+     - Negative effects: what becomes false (e.g., `"¬Dry(Ceiling)"`)
+   - Both positive and negative effects are in a single postconditions list
 
-**3. MCP Client Implementation**
-```python
-# Example structure for MCP client integration
-import subprocess
-from mcp import client
+**3. Implementation Details**:
+   - States are managed as sets of conditions
+   - Operators defined in JSON files (e.g., `robot_painting_operators.json`)
+   - State classes handle applying operators and checking conditions
+   - Plan class builds plans using **reverse search** from goal to start (line 19-27 in `plan.py`)
+   - Plans are reversed after construction (line 30 in `plan.py`)
+   - `precondition_for_reverse_search` is key for backward chaining (line 23 in `plan.py`)
 
-# Start MCP server as subprocess
-server_process = subprocess.Popen([
-    "python", "pop_solver/mcp_server.py"
-], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+**4. Blocks World Considerations**:
+   - Use same precondition/postcondition format as robot domain
+   - State predicates: `On(A, B)`, `Clear(A)`, `Holding(A)`
+   - Operators will need dynamic handling for parameterized blocks (A, B, C, etc.)
 
-# Connect MCP client via STDIO
-client = mcp.Client(transport='stdio', process=server_process)
+**5. Testing**: Enable the skipped blockworld tests once implementation is complete
 
-# Call planning tools
-result = await client.call_tool("create_plan_tool", {
-    "start_conditions": ["On(Robot, Floor)", "Dry(Ladder)", "Dry(Ceiling)"],
-    "goal_conditions": ["Painted(Ceiling)"],
-    "problem_type": "robot"
-})
-```
+## CRITICAL NOTES FOR NEXT CLAUDE ITERATION
 
-### Critical Technical Details (From Phase 1 & 2)
+### Working System Architecture
+1. **MCP Server** (`mcp_server.py`) exposes planning functions as tools via STDIO
+2. **MCP Client** (`mcp_client.py`) connects to server as subprocess, handles JSONRPC communication
+3. **Agent** (`agent.py`) uses Claude Sonnet 4 to parse natural language and call MCP tools
+4. **API** (`app.py`) provides `/solve` endpoint for natural language queries
 
-**Available Operators**: `['climb-ladder', 'descend-ladder', 'paint-ceiling', 'paint-ladder']`
+### Key Technical Details
+- **Model**: `claude-sonnet-4-20250514` (NOT 3.5 variants - they don't work)
+- **Python**: 3.12+ required (3.13 works but shows warnings)
+- **Virtual Env**: Using Poetry (removed old `venv_pop/`)
+- **Docker**: Loads `.env` automatically via `env_file` directive
+- **Tests**: 47 passing (10 Phase 3 use mocks, 2 require API key for real tests)
 
-**State Conditions Format**: `['On(Robot, Floor)', 'Dry(Ladder)', 'Dry(Ceiling)']`
+### Known Issues & Solutions
+1. **apply_operator bug**: Returns start state instead of result state (precondition validation works though)
+   - Bug is in lines 179-186 of `robot_painting_state.py` - hardcoded state changes
+2. **JSON parsing in Docker**: Curl requests may have quote escaping issues - test with Python client
+3. **Poetry + PyCharm**: Use Poetry plugin or manually set interpreter to Poetry venv path
+4. **Operator has TODO**: Line 11 in `operator.py` - Blockworld needs dynamic operators
 
-**Goal Conditions**: `['Painted(Ceiling)', 'Painted(Ladder)']`
+### Phase 4 Blockworld TODO
+1. Create `blockworld_planner.py` implementation
+2. Create `blockworld_operators.json` with pickup/putdown/stack/unstack
+3. Remove ValueError in `planning_solving_functions.py`
+4. Update agent prompts to handle blocks world queries
+5. Add blocks world examples to tests
 
-**Known Issues:**
-- apply_operator returns start state instead of result state (but validation works)
-- Only 'robot' problem type works, 'blockworld' returns graceful error
-- LookupError exceptions handled properly by MCP tools
-
-### Agent Architecture
-
-**Simple Classification Approach:**
-1. Use LLM prompt to analyze natural language query
-2. Extract key elements: problem type, current state, desired goals
-3. Convert to planning function format
-4. Call MCP tools via local client
-5. Format and return results
-
-**Example User Queries to Handle:**
-- "Help the robot paint the ceiling"
-- "The robot is on the floor, ladder and ceiling are dry, I want the ceiling painted"
-- "Create a plan to paint both the ceiling and ladder"
-
-### Success Criteria for Phase 3
-- `/solve` endpoint accepts natural language queries
-- Agent correctly classifies and extracts planning elements
-- MCP client successfully communicates with local server
-- Returns human-readable planning results
-- Error handling for invalid queries and planning failures
-
-### Test Strategy for Phase 3
-- **Agent endpoint tests**: Test `/solve` endpoint with various natural language queries
-- **MCP client-server integration**: Verify full communication pipeline works
-- **Error handling**: Test invalid queries, planning failures, and MCP communication errors
-- **Natural language processing**: Validate extraction of planning elements from user queries
+### Important File Locations
+- **Planning Logic**: `pop_solver/planning/planning_solving_functions.py`
+- **MCP Tools**: `pop_solver/mcp_server.py`
+- **NLP Agent**: `pop_solver/agent.py`
+- **API Endpoint**: `pop_solver/app.py`
+- **Tests**: `tests/test_phase3_integration.py`
 
 ## Documentation References
 
@@ -348,7 +408,13 @@ result = await client.call_tool("create_plan_tool", {
 - [MCP Client Development](https://modelcontextprotocol.io/docs/develop/build-client) - Python client implementation for connecting to STDIO servers
 
 ### Planning Theory
-- _To be added as we research planning algorithms and PDDL specifications_
+- [Partial Order Planning](https://en.wikipedia.org/wiki/Partial-order_planning) - The planning algorithm used in this system
+- [Blocks World](https://en.wikipedia.org/wiki/Blocks_world) - Classic AI planning domain overview
+- **Key Clarification**: This system uses:
+  - **POP Algorithm**: For planning (partial ordering, conflict resolution)
+  - **Precondition/Postcondition Format**: For operators (NOT classic STRIPS add/delete effects)
+  - Postconditions contain BOTH positive and negative effects in one list
+- _PDDL specifications to be added as we expand domain support_
 
 ## Implementation Status
 - ✅ Poetry + Docker foundation complete

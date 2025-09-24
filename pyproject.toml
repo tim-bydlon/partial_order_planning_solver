@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "partial-order-planning-solver"
+version = "0.1.0"
+description = "A partial order planning solver implementation"
+authors = ["Tim Bydlon <tbydlon3@gatech.edu>"]
+readme = "README.md"
+packages = [{include = "pop_solver"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+python-dotenv = "^1.0.1"
+fastapi = "^0.112.2"
+uvicorn = { extras = ["standard"], version = "^0.30.6" }
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+black = "^23.0.0"
+isort = "^5.12.0"
+flake8 = "^6.0.0"
+poethepoet = "^0.27.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+pop-solver = "pop_solver.main:main"
+
+[tool.poe.tasks]
+serve = "uvicorn pop_solver.app:app --reload"
+test = "pytest tests/"
+format = ["black .", "isort ."]
+lint = ["flake8 .", "black --check .", "isort --check-only ."]

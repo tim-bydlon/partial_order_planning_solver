@@ -1,0 +1,72 @@
+# Concrete implementation for Robot Painting
+import json
+from typing import List, Dict
+
+from pop_solver.planning.operator import Operator
+from pop_solver.planning.operator.instances import RobotPaintingOperator
+from pop_solver.planning.planner.planner import Planner
+from pop_solver.planning.state.state import State
+import os
+
+
+class RobotPaintingPlanner(Planner):
+    def _generate_operators(self) -> Dict[str, 'Operator']:
+        json_filepath = str(self._get_json_filepath())  # Get the JSON file path from the subclass
+
+        with open(json_filepath, 'r') as file:
+            data = json.load(file)  # Load the JSON file
+
+        operators = {}
+        for op_data in data:
+            name = op_data['name']
+            preconditions = op_data['preconditions']
+            postconditions = op_data['postconditions']
+            operator = RobotPaintingOperator(name, preconditions, postconditions)
+            operators[name] = operator
+
+        print(f"Loaded operator for {self.__class__.__name__}: {operators}")
+        return operators
+
+    # TODO: when using the State .apply_operator method, make sure to check if the operator exists in planner.operators first
+    def _get_json_filepath(self) -> str:
+        """Provide the JSON file path for RobotPaintingPlanner's operator."""
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        planning_dir = os.path.dirname(os.path.dirname(current_dir))
+        robot_planning_operators_path = os.path.join(planning_dir, 'data', 'robot_painting_operators.json')
+        return robot_planning_operators_path
+
+    def reorder_partial_plans_list(self) -> None:
+        """Robot painting instance shortcut - reorder to avoid painting ladder before painting ceiling"""
+        if len(self.partial_plans) > 1:
+            if self.partial_plans[0].primary_goal == 'Painted(Ladder)':
+                self.partial_plans[0], self.partial_plans[1] = self.partial_plans[1], self.partial_plans[0]
+
+    # def generate_partial_plan(self, start_state: State, goal_condition: str) -> str:
+    #     print(f"Generating plan for Robot Painting from {start_state} to goal_state satisfying {goal_condition}")
+    #     return ["paint ladder", "paint ceiling"]
+    #
+    # def reorder_partial_plans(self, plans: Dict) -> List[str]:
+    #     print(f"Reordering plan to avoid obstacles: {plans}")
+    #     return ["paint ceiling", "move ladder", "paint ladder"]
+    #
+    # def generate_complete_plan(self, start_state: State, goal_state: State) -> str:
+    #     print("RobotPaintingPlanner: Custom complete plan logic")
+    #
+    #     # Use the loaded operator for additional logic (if needed)
+    #     print(f"Operators available for planning: {self.operators}")
+    #
+    #     goal_conditions = goal_state.return_eligible_goal_conditions()
+    #
+    #     # Step 1: Generate an initial plan
+    #     partial_plans_dict = dict() #dict of partial plans
+    #     for goal_condition in goal_conditions:
+    #         partial_plan = self.generate_partial_plan(start_state, goal_condition)
+    #         partial_plans_dict[goal_condition] = partial_plan
+    #
+    #     # Step 2: Reorder the plan to avoid conflicts
+    #     reordered_plans = self.reorder_partial_plans(partial_plans_dict)
+    #
+    #     # Step 3: Complete the reordered plan
+    #     complete_plan = self.complete_plan(reordered_plans)
+    #
+    #     return complete_plan

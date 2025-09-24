@@ -86,3 +86,6 @@ logs/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# Development documentation (keep local)
+README_DEV.md

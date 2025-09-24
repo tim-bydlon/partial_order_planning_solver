@@ -1,0 +1,57 @@
+# .dockerignore
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+venv_pop/
+env/
+ENV/
+
+# Poetry virtual environment
+/app/.venv/
+
+# Docker files and Compose files
+.dockerignore
+Dockerfile*
+docker-compose*.yml
+docker-compose*.yaml
+
+# Environment variables
+.env
+*.env
+
+# Git files
+.git/
+.gitignore
+
+# IDE and editor files
+.idea/
+.vscode/
+.claude/
+*.swp
+*~
+
+# Logs
+*.log
+logs/
+
+# Test and coverage results
+coverage/
+*.cover
+*.coverage
+*.test
+.nox/
+.tox/
+pytest_cache/
+
+# Temporary files
+*.bak
+*.tmp
+*.old
+*.orig

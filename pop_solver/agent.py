@@ -22,7 +22,8 @@ class PlanningAgent:
             raise ValueError("ANTHROPIC_API_KEY not provided or found in environment")
 
         self.client = AsyncAnthropic(api_key=self.api_key)
-        self.model = "claude-3-5-sonnet-20241022"
+        # Using Claude Sonnet 4
+        self.model = "claude-sonnet-4-20250514"
 
     async def parse_query(self, user_query: str) -> Dict[str, Any]:
         """Parse natural language query to extract planning elements"""

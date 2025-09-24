@@ -1,6 +1,6 @@
 # Partial Order Planning Solver
 
-A natural language planning system that uses Claude AI to understand planning queries and solve them using partial order planning algorithms.
+A natural language planning system that uses Claude AI to understand planning queries and solve them using partial order planning algorithms with precondition/postcondition operators.
 
 ## Features
 
@@ -155,7 +155,36 @@ Try these natural language queries:
 }
 ```
 
-## Planning Domain
+## Planning Theory
+
+### Partial Order Planning (POP)
+
+This system uses **Partial Order Planning**, which:
+- Builds separate **partial plans** for each goal condition
+- Reorders plans to avoid conflicts between actions
+- Connects partial plans together into a complete solution
+- Uses **backward chaining** from goals to the start state
+
+### Operator Format
+
+Operators use a **precondition/postcondition** format:
+- **Preconditions**: Conditions that must be true before the operator can be applied
+- **Postconditions**: All changes to the state (both what becomes true AND what becomes false)
+
+Example operator from `robot_painting_operators.json`:
+```json
+{
+  "name": "paint-ceiling",
+  "preconditions": ["On(Robot, Ladder)"],
+  "postconditions": ["Painted(Ceiling)", "¬Dry(Ceiling)"]
+}
+```
+
+Note: The postconditions include both:
+- Positive effects: `"Painted(Ceiling)"` (ceiling is now painted)
+- Negative effects: `"¬Dry(Ceiling)"` (ceiling is no longer dry)
+
+## Planning Domains
 
 The system currently supports a **robot painting domain** with:
 

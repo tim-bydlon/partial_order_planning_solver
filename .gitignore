@@ -61,7 +61,7 @@ poetry.lock
 # IDE and editor files
 .idea/
 .vscode/
-.claude/
+.claude/settings.local.json
 *.swp
 *~
 

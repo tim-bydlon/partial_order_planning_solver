@@ -1,12 +1,14 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 from dotenv import load_dotenv
+from typing import Optional
 
 load_dotenv()
 
 app = FastAPI(
     title="Partial Order Planning Solver",
-    description="A FastAPI service for partial order planning",
+    description="A FastAPI service for partial order planning with natural language interface",
     version="0.1.0"
 )
 
@@ -27,9 +29,53 @@ async def health_check():
         "debug": os.getenv("API_DEBUG", "false").lower() == "true"
     }
 
-@app.get("/solve")
-async def solve_planning_problem():
-    return {
-        "message": "Planning solver endpoint - coming soon!",
-        "todo": "Implement partial order planning algorithm"
-    }
+class PlanningQuery(BaseModel):
+    """Request model for planning queries"""
+    query: str
+    api_key: Optional[str] = None  # Optional API key override
+
+
+class PlanningResponse(BaseModel):
+    """Response model for planning queries"""
+    query: str
+    success: bool
+    result: str
+    details: Optional[dict] = None
+
+
+@app.post("/solve", response_model=PlanningResponse)
+async def solve_planning_problem(request: PlanningQuery):
+    """
+    Process natural language planning queries.
+
+    Examples:
+    - "Help the robot paint the ceiling"
+    - "The robot needs to paint both the ceiling and the ladder"
+    - "What happens if the robot climbs the ladder?"
+    """
+    try:
+        # Import here to avoid circular dependencies and only load when needed
+        from pop_solver.agent import PlanningAgent
+
+        # Initialize agent with optional API key override
+        agent = PlanningAgent(api_key=request.api_key)
+
+        # Process the query
+        result = await agent.process_query(request.query)
+
+        # Return formatted response
+        return PlanningResponse(
+            query=request.query,
+            success=result["success"],
+            result=result["formatted_result"],
+            details={
+                "parsed": result["parsed"],
+                "raw_result": result["raw_result"]
+            }
+        )
+    except ValueError as e:
+        # Missing API key or configuration error
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        # Unexpected error
+        raise HTTPException(status_code=500, detail=f"Failed to process query: {str(e)}")

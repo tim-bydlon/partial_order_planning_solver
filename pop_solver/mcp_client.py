@@ -74,7 +74,15 @@ class MCPClient:
 
         # Read response
         response_line = await self.process.stdout.readline()
-        response = json.loads(response_line.decode())
+        if not response_line:
+            # Check if there's any stderr output
+            stderr = await self.process.stderr.read(1024)
+            raise ConnectionError(f"MCP server returned empty response. Stderr: {stderr.decode() if stderr else 'None'}")
+
+        try:
+            response = json.loads(response_line.decode())
+        except json.JSONDecodeError as e:
+            raise ConnectionError(f"Invalid JSON response from MCP server: {response_line.decode()!r}. Error: {e}")
 
         # Handle response
         if response.get("id") != self._request_id:

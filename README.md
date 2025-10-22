@@ -4,11 +4,11 @@ A natural language planning system that uses Claude AI to understand planning qu
 
 ## Features
 
-- 🤖 **Natural Language Interface**: Ask planning questions in plain English
-- 📋 **Robot Painting Domain**: Solve planning problems for a robot that can climb ladders and paint
-- 🔧 **MCP Server Integration**: Modular architecture using Model Context Protocol
-- 🐳 **Docker Support**: Easy deployment with Docker Compose
-- ⚡ **Fast Development**: Poetry-based development with hot reload
+- **Natural Language Interface**: Ask planning questions in plain English
+- **Robot Painting Domain**: Solve planning problems for a robot that can climb ladders and paint
+- **MCP Server Integration**: Modular architecture using Model Context Protocol
+- **Docker Support**: Easy deployment with Docker Compose
+- **Fast Development**: Poetry-based development with hot reload
 
 ## Quick Start
 
@@ -220,7 +220,3 @@ docker-compose up --build
 - Ensure `ANTHROPIC_API_KEY` is set in `.env`
 - The system uses Claude Sonnet 4 model
 - Check your API key has proper permissions
-
-## License
-
-[Your License Here]

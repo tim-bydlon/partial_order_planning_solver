@@ -94,30 +94,71 @@ Response:
 
 ### Solve Planning Problems
 
-Send natural language queries to the `/solve` endpoint:
+Send natural language queries to the `/solve` endpoint. All examples below can be copied and pasted directly into your terminal.
 
+#### Create a Plan
+
+**Paint the ceiling:**
 ```bash
-curl -X POST http://localhost:8000/solve \
+curl -s -X POST http://localhost:8000/solve \
   -H "Content-Type: application/json" \
-  -d '{"query": "Help the robot paint the ceiling"}'
+  -d '{"query": "Paint the ceiling"}'
 ```
 
-### Example Queries
+**Paint the ladder:**
+```bash
+curl -s -X POST http://localhost:8000/solve \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Create a plan to paint the ladder"}'
+```
 
-Try these natural language queries:
+**Multiple goals:**
+```bash
+curl -s -X POST http://localhost:8000/solve \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Paint both the ceiling and the ladder"}'
+```
 
-1. **Create a plan:**
-   - "Help the robot paint the ceiling"
-   - "The robot needs to paint both the ceiling and the ladder"
-   - "I want the ladder and ceiling to be painted"
+#### Apply Single Operators
 
-2. **Apply single operators:**
-   - "What happens if the robot climbs the ladder?"
-   - "Show me what changes when the robot paints the ceiling"
+**Climb the ladder:**
+```bash
+curl -s -X POST http://localhost:8000/solve \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Apply the climb-ladder operator"}'
+```
 
-3. **Complex scenarios:**
-   - "The robot is on the ladder, now paint the ceiling"
-   - "Robot is on the floor with a wet ladder, what can it do?"
+**Descend the ladder:**
+```bash
+curl -s -X POST http://localhost:8000/solve \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What happens if the robot descends the ladder?"}'
+```
+
+#### Custom Initial States
+
+**Robot starts on the ladder:**
+```bash
+curl -s -X POST http://localhost:8000/solve \
+  -H "Content-Type: application/json" \
+  -d '{"query": "The robot is on the ladder. Paint the ceiling."}'
+```
+
+**Wet ladder scenario:**
+```bash
+curl -s -X POST http://localhost:8000/solve \
+  -H "Content-Type: application/json" \
+  -d '{"query": "The ladder is wet (not dry). Can the robot climb it?"}'
+```
+
+#### Pretty-Print Output
+
+Add `| python -m json.tool` to format the JSON response:
+```bash
+curl -s -X POST http://localhost:8000/solve \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Paint the ceiling"}' | python -m json.tool
+```
 
 ## API Endpoints
 
